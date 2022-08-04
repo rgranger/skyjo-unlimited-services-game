@@ -82,3 +82,18 @@ enum CardStatus {
     Shown,
     Hidden,
 }
+
+pub enum PlayerDeck {
+    Slot_1_1,
+    Slot_1_2,
+    Slot_1_3,
+    Slot_2_1,
+    Slot_2_2,
+    Slot_2_3,
+    Slot_3_1,
+    Slot_3_2,
+    Slot_3_3,
+    Slot_4_1,
+    Slot_4_2,
+    Slot_4_3,
+}
