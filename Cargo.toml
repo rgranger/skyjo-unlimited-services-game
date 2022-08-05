@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 rand = "0.8"
+tokio-tungstenite = "*"
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
