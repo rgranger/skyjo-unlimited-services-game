@@ -1,11 +1,12 @@
 mod skyjo;
 
-use futures_util::stream::SplitStream;
+use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::SinkExt;
 use futures_util::{future, stream::TryStreamExt, StreamExt};
 use skyjo::Game;
 use skyjo::PlayerDeck::*;
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
@@ -48,11 +49,34 @@ async fn handle_connection(raw_stream: TcpStream) {
 
     let (mut writer, reader) = ws_stream.split();
 
-    tokio::spawn(handle_reader(reader));
+    let (tx, mut rx) = mpsc::channel(32);
+
+    tokio::spawn(handle_reader(reader, tx));
+    tokio::spawn(handle_writer(writer, rx));
 }
 
-async fn handle_reader(mut reader: SplitStream<WebSocketStream<TcpStream>>) {
+async fn handle_reader(mut reader: SplitStream<WebSocketStream<TcpStream>>, tx: Sender<Command>) {
     while let Some(Ok(message)) = reader.next().await {
         println!("{}", message);
+        if let Ok("hello") = message.to_text() {
+            tx.send(Command::Hello).await;
+        }
+    }
+}
+
+enum Command {
+    Hello,
+}
+
+async fn handle_writer(
+    mut writer: SplitSink<WebSocketStream<TcpStream>, Message>,
+    mut rx: Receiver<Command>,
+) {
+    while let Some(command) = rx.recv().await {
+        match command {
+            Command::Hello => {
+                writer.send(Message::Text("world".to_string())).await;
+            }
+        }
     }
 }
