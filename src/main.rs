@@ -1,11 +1,13 @@
 mod skyjo;
 
+use futures_util::stream::SplitStream;
 use futures_util::SinkExt;
 use futures_util::{future, stream::TryStreamExt, StreamExt};
 use skyjo::Game;
 use skyjo::PlayerDeck::*;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::WebSocketStream;
 
 #[tokio::main]
 async fn main() {
@@ -15,7 +17,7 @@ async fn main() {
 
     let game = Game::new(3);
 
-    println!("{:?}", game);
+    //println!("{:?}", game);
 
     //let game = game.start();
     //let card = game.players[0].reveal(Slot_1_1);
@@ -44,15 +46,13 @@ async fn handle_connection(raw_stream: TcpStream) {
         .await
         .expect("Error during the websocket handshake occurred");
 
-    let (mut outgoing, incoming) = ws_stream.split();
+    let (mut writer, reader) = ws_stream.split();
 
-    incoming
-        .try_for_each(|msg| {
-            println!("Received a message: {}", msg.to_text().unwrap());
+    tokio::spawn(handle_reader(reader));
+}
 
-            outgoing.send(Message::Text("world".to_string()));
-
-            future::ok(())
-        })
-        .await;
+async fn handle_reader(mut reader: SplitStream<WebSocketStream<TcpStream>>) {
+    while let Some(Ok(message)) = reader.next().await {
+        println!("{}", message);
+    }
 }
